@@ -29,29 +29,41 @@ local mem = {
 local kills_ptr  = mem.alloc(4)
 local deaths_ptr = mem.alloc(4)
 local ratio_ptr  = mem.alloc(4)
+local deathmatch_kills_ptr = mem.alloc(4)
+local deathmatch_deaths_ptr = mem.alloc(4)
 
 -- thank you Sapphire for helping me with reading/writing globals and helping me fix the ratio not being written c:
-local global_kills  = mem.g_global(1853910 + 1 + (players.user() * 862) + 205 + 28)
-local global_deaths = mem.g_global(1853910 + 1 + (players.user() * 862) + 205 + 29)
-local global_ratio  = mem.g_global(1853910 + 1 + (players.user() * 862) + 205 + 26)
+local global_kills  = mem.g_global(1853988 + 1 + (players.user() * 867) + 205 + 28) -- MPPLY_KILLS_PLAYERS
+local global_deaths = mem.g_global(1853988 + 1 + (players.user() * 867) + 205 + 29) -- MPPLY_DEATHS_PLAYER
+local global_ratio  = mem.g_global(1853988 + 1 + (players.user() * 867) + 205 + 26) -- MPPLY_KILL_DEATH_RATIO
+local global_deathmatch_kills = mem.g_global(2657704 + 1 + (players.user() * 463) + 126 + 1 + 2) -- MPPLY_DM_TOTAL_KILLS
+local global_deathmatch_deaths = mem.g_global(2657704 + 1 + (players.user() * 463) + 126 + 1 + 3) -- MPPLY_DM_TOTAL_DEATHS
 
 local kills_stat_hash  = joaat("MPPLY_KILLS_PLAYERS")
 local deaths_stat_hash = joaat("MPPLY_DEATHS_PLAYER")
 local ratio_stat_hash  = joaat("MPPLY_KILL_DEATH_RATIO")
+local deathmatch_kills_stat_hash = joaat("MPPLY_DM_TOTAL_KILLS")
+local deathmatch_deaths_stat_hash = joaat("MPPLY_DM_TOTAL_DEATHS")
 
 util.create_tick_handler(function()
 
     STATS.STAT_GET_INT(kills_stat_hash, kills_ptr, -1)
     STATS.STAT_GET_INT(deaths_stat_hash, deaths_ptr, -1)
     STATS.STAT_GET_FLOAT(ratio_stat_hash, ratio_ptr, -1)
+    STATS.STAT_GET_INT(deathmatch_kills_stat_hash, deathmatch_kills_ptr, -1)
+    STATS.STAT_GET_INT(deathmatch_deaths_stat_hash, deathmatch_deaths_ptr, -1)
 
     get_stat_kills  = mem.get_int(kills_ptr)
     get_stat_deaths = mem.get_int(deaths_ptr)
     get_stat_ratio  = mem.get_float(ratio_ptr)
+    get_stat_deathmatch_kills  = mem.get_int(deathmatch_kills_ptr)
+    get_stat_deathmatch_deaths = mem.get_int(deathmatch_deaths_ptr)
 
     get_global_kills  = mem.get_int(global_kills)
     get_global_deaths = mem.get_int(global_deaths)
     get_global_ratio = mem.get_float(global_ratio)
+    get_global_deathmatch_kills  = mem.get_int(global_deathmatch_kills)
+    get_global_deathmatch_deaths = mem.get_int(global_deathmatch_deaths)
 
     if get_global_kills == get_stat_kills then
         cur_kills = get_global_kills
@@ -65,11 +77,19 @@ util.create_tick_handler(function()
         cur_deaths = get_stat_deaths
     end
 
-    if get_global_ratio == get_stat_ratio then
-        cur_ratio = get_global_ratio
+    if get_global_deathmatch_kills == get_stat_deathmatch_kills then
+        deathmatch_kills = get_global_deathmatch_kills
     else
-        cur_ratio = get_stat_ratio
+        deathmatch_kills = get_stat_deathmatch_kills
     end
+
+    if get_global_deathmatch_deaths == get_stat_deathmatch_deaths then
+        deathmatch_deaths = get_global_deathmatch_deaths
+    else
+        deathmatch_deaths = get_stat_deathmatch_deaths
+    end
+
+    cur_ratio = round(cur_kills / cur_deaths, 2)
 end)
 
 if util.is_session_started() then
@@ -106,10 +126,14 @@ if util.is_session_started() then
         memory.write_int(global_kills, kills_slider_value)
         memory.write_int(global_deaths, deaths_slider_value)
         memory.write_float(global_ratio, new_ratio)
+        memory.write_int(global_deathmatch_kills, kills_slider_value)
+        memory.write_int(global_deathmatch_deaths, deaths_slider_value)
 
         STATS.STAT_SET_INT(kills_stat_hash, kills_slider_value, true)
         STATS.STAT_SET_INT(deaths_stat_hash, deaths_slider_value, true)
         STATS.STAT_SET_FLOAT(ratio_stat_hash, new_ratio, true)
+        STATS.STAT_SET_INT(deathmatch_kills_stat_hash, kills_slider_value, true)
+        STATS.STAT_SET_INT(deathmatch_deaths_stat_hash, deaths_slider_value, true)
 
         util.toast("Set your KD ratio to " .. new_ratio .. " c:")
     end)
