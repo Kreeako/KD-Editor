@@ -7,9 +7,6 @@ end
 
 local joaat = util.joaat
 local my_root = menu.my_root()
-local action = menu.action
-local slider = menu.slider
-local div = menu.divider
 local max_int = 2147483647
 
 local STATS = {
@@ -90,28 +87,32 @@ util.create_tick_handler(function()
     end
 
     cur_ratio = round(cur_kills / cur_deaths, 2)
+
+    if cur_kills == 0 and cur_deaths == 0 then
+        cur_ratio = 0
+    end
 end)
 
 if util.is_session_started() then
 
-    div(my_root, "Current KD")
+    my_root:divider("Current KD")
 
-    local cur_kills_display = action(my_root, "Current Kills: " .. cur_kills, { "" }, "Shows current kills.", function() end)
+    local cur_kills_display = my_root:action("Current Kills: " .. cur_kills, { "" }, "Shows current kills.", function() end)
 
-    local cur_death_display = action(my_root, "Current Deaths: " .. cur_deaths, { "" }, "Shows current deaths.", function() end)
+    local cur_death_display = my_root:action("Current Deaths: " .. cur_deaths, { "" }, "Shows current deaths.", function() end)
 
-    local cur_ratio_display = action(my_root, "Current Ratio: " .. cur_ratio, { "" }, "Shows current ratio.", function() end)
+    local cur_ratio_display = my_root:action("Current Ratio: " .. cur_ratio, { "" }, "Shows current ratio.", function() end)
 
-    div(my_root, "New KD")
+    my_root:divider("New KD")
 
     local kills_slider_value = cur_kills
     local deaths_slider_value = cur_deaths
 
-    local new_kills = slider(my_root, "New Kills Amount", {"killsamount"}, "Selects the number of kills.", -max_int, max_int, cur_kills, 1, function(value)
+    local new_kills = my_root:slider("New Kills Amount", {"killsamount"}, "Selects the number of kills.", -max_int, max_int, cur_kills, 1, function(value)
         kills_slider_value = value
     end)
 
-    local new_deaths = slider(my_root, "New Deaths Amount", {"deathsamount"}, "Selects the number of deaths.", -max_int, max_int, cur_deaths, 1, function(value)
+    local new_deaths = my_root:slider("New Deaths Amount", {"deathsamount"}, "Selects the number of deaths.", -max_int, max_int, cur_deaths, 1, function(value)
         deaths_slider_value = value
     end)
 
@@ -119,9 +120,9 @@ if util.is_session_started() then
         new_ratio = menu.get_value(new_kills) / menu.get_value(new_deaths)
     end)
 
-    local new_ratio_display = action(my_root, "New Ratio: " .. round(new_ratio, 2), { "" }, "Shows new ratio.", function()  end)
+    local new_ratio_display = my_root:action("New Ratio: " .. round(new_ratio, 2), { "" }, "Shows new ratio.", function()  end)
 
-    action(my_root, "Set KD", { "setkd" }, "Sets your KD.", function()
+    my_root:action("Set KD", { "setkd" }, "Sets your KD.", function()
 
         memory.write_int(global_kills, kills_slider_value)
         memory.write_int(global_deaths, deaths_slider_value)
