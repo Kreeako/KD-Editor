@@ -1,3 +1,19 @@
+local _MPPLY_GLOBAL = 1845263
+local _MPPLY_GLOBAL_2 = 877
+local _MPPLY_GLOBAL_3 = 205
+
+local _MPPLY_DM_GLOBAL = 2657921
+local _MPPLY_DM_GLOBAL_2 = 463
+local _MPPLY_DM_GLOBAL_3 = 126
+
+local kills_global             = memory.script_global(_MPPLY_GLOBAL + 1 + (players.user() * _MPPLY_GLOBAL_2) + _MPPLY_GLOBAL_3 + 28) -- MPPLY_KILLS_PLAYERS
+local deaths_global            = memory.script_global(_MPPLY_GLOBAL + 1 + (players.user() * _MPPLY_GLOBAL_2) + _MPPLY_GLOBAL_3 + 29) -- MPPLY_DEATHS_PLAYER
+local ratio_global             = memory.script_global(_MPPLY_GLOBAL + 1 + (players.user() * _MPPLY_GLOBAL_2) + _MPPLY_GLOBAL_3 + 26) -- MPPLY_KILL_DEATH_RATIO
+local deathmatch_kills_global  = memory.script_global(_MPPLY_DM_GLOBAL + 1 + (players.user() * _MPPLY_DM_GLOBAL_2) + _MPPLY_DM_GLOBAL_3 + 1 + 2) -- MPPLY_DM_TOTAL_KILLS
+local deathmatch_deaths_global = memory.script_global(_MPPLY_DM_GLOBAL + 1 + (players.user() * _MPPLY_DM_GLOBAL_2) + _MPPLY_DM_GLOBAL_3 + 1 + 3) -- MPPLY_DM_TOTAL_DEATHS
+
+-- thank you Sapphire for helping me with reading/writing globals and helping me fix the ratio not being written <3
+
 -- stackoverflow is love
 -- https://stackoverflow.com/a/67917666
 local function round(num, numDecimalPlaces)
@@ -5,148 +21,124 @@ local function round(num, numDecimalPlaces)
     return math.floor(num * mult + 0.5) / mult
 end
 
-local joaat = util.joaat
 local my_root = menu.my_root()
 local max_int = 2147483647
 
 local STATS = {
     ["STAT_GET_INT"]=--[[BOOL (bool)]] function(--[[Hash (int)]] statHash,--[[int* (pointer)]] outValue,--[[int]] p2)native_invoker.begin_call()native_invoker.push_arg_int(statHash)native_invoker.push_arg_pointer(outValue)native_invoker.push_arg_int(p2)native_invoker.end_call_2(0x767FBC2AC802EF3D)return native_invoker.get_return_value_bool()end,
-    ["STAT_GET_FLOAT"]=--[[BOOL (bool)]] function(--[[Hash (int)]] statHash,--[[float* (pointer)]] outValue,--[[Any (int)]] p2)native_invoker.begin_call()native_invoker.push_arg_int(statHash)native_invoker.push_arg_pointer(outValue)native_invoker.push_arg_int(p2)native_invoker.end_call_2(0xD7AE6C9C9C6AC54C)return native_invoker.get_return_value_bool()end,
     ["STAT_SET_INT"]=--[[BOOL (bool)]] function(--[[Hash (int)]] statName,--[[int]] value,--[[BOOL (bool)]] save)native_invoker.begin_call()native_invoker.push_arg_int(statName)native_invoker.push_arg_int(value)native_invoker.push_arg_bool(save)native_invoker.end_call_2(0xB3271D7AB655B441)return native_invoker.get_return_value_bool()end,
     ["STAT_SET_FLOAT"]=--[[BOOL (bool)]] function(--[[Hash (int)]] statName,--[[float]] value,--[[BOOL (bool)]] save)native_invoker.begin_call()native_invoker.push_arg_int(statName)native_invoker.push_arg_float(value)native_invoker.push_arg_bool(save)native_invoker.end_call_2(0x4851997F37FE9B3C)return native_invoker.get_return_value_bool()end,
 }
 
-local mem = {
-    alloc = memory.alloc,
-    g_global = memory.script_global,
-    get_int = memory.read_int,
-    get_float = memory.read_float,
-}
+local read_global_stat_integer_pointer = memory.alloc(4)
+--Read a stat that corresponds with a global.
+---@param global_integer integer --The global for the stat.
+---@param stat_name string --The stat name.
+---@return integer --Returns stat/global value as an integer.
+local function read_global_stat_int(global_integer, stat_name)
+    local int_stat_retrieved = STATS.STAT_GET_INT(util.joaat(stat_name), read_global_stat_integer_pointer, -1)
 
-local kills_ptr  = mem.alloc(4)
-local deaths_ptr = mem.alloc(4)
-local ratio_ptr  = mem.alloc(4)
-local deathmatch_kills_ptr = mem.alloc(4)
-local deathmatch_deaths_ptr = mem.alloc(4)
+    local retrieved_global_int = memory.read_int(global_integer)
 
--- thank you Sapphire for helping me with reading/writing globals and helping me fix the ratio not being written c:
-local global_kills  = mem.g_global(1853988 + 1 + (players.user() * 867) + 205 + 28) -- MPPLY_KILLS_PLAYERS
-local global_deaths = mem.g_global(1853988 + 1 + (players.user() * 867) + 205 + 29) -- MPPLY_DEATHS_PLAYER
-local global_ratio  = mem.g_global(1853988 + 1 + (players.user() * 867) + 205 + 26) -- MPPLY_KILL_DEATH_RATIO
-local global_deathmatch_kills = mem.g_global(2657704 + 1 + (players.user() * 463) + 126 + 1 + 2) -- MPPLY_DM_TOTAL_KILLS
-local global_deathmatch_deaths = mem.g_global(2657704 + 1 + (players.user() * 463) + 126 + 1 + 3) -- MPPLY_DM_TOTAL_DEATHS
-
-local kills_stat_hash  = joaat("MPPLY_KILLS_PLAYERS")
-local deaths_stat_hash = joaat("MPPLY_DEATHS_PLAYER")
-local ratio_stat_hash  = joaat("MPPLY_KILL_DEATH_RATIO")
-local deathmatch_kills_stat_hash = joaat("MPPLY_DM_TOTAL_KILLS")
-local deathmatch_deaths_stat_hash = joaat("MPPLY_DM_TOTAL_DEATHS")
-
-util.create_tick_handler(function()
-
-    STATS.STAT_GET_INT(kills_stat_hash, kills_ptr, -1)
-    STATS.STAT_GET_INT(deaths_stat_hash, deaths_ptr, -1)
-    STATS.STAT_GET_FLOAT(ratio_stat_hash, ratio_ptr, -1)
-    STATS.STAT_GET_INT(deathmatch_kills_stat_hash, deathmatch_kills_ptr, -1)
-    STATS.STAT_GET_INT(deathmatch_deaths_stat_hash, deathmatch_deaths_ptr, -1)
-
-    get_stat_kills  = mem.get_int(kills_ptr)
-    get_stat_deaths = mem.get_int(deaths_ptr)
-    get_stat_ratio  = mem.get_float(ratio_ptr)
-    get_stat_deathmatch_kills  = mem.get_int(deathmatch_kills_ptr)
-    get_stat_deathmatch_deaths = mem.get_int(deathmatch_deaths_ptr)
-
-    get_global_kills  = mem.get_int(global_kills)
-    get_global_deaths = mem.get_int(global_deaths)
-    get_global_ratio = mem.get_float(global_ratio)
-    get_global_deathmatch_kills  = mem.get_int(global_deathmatch_kills)
-    get_global_deathmatch_deaths = mem.get_int(global_deathmatch_deaths)
-
-    if get_global_kills == get_stat_kills then
-        cur_kills = get_global_kills
-    else
-        cur_kills = get_stat_kills
+    if int_stat_retrieved then
+        retrieved_stat_int = memory.read_int(read_global_stat_integer_pointer)
     end
 
-    if get_global_deaths == get_stat_deaths then
-        cur_deaths = get_global_deaths
-    else
-        cur_deaths = get_stat_deaths
+    if retrieved_global_int == retrieved_stat_int then
+        return retrieved_global_int
     end
 
-    if get_global_deathmatch_kills == get_stat_deathmatch_kills then
-        deathmatch_kills = get_global_deathmatch_kills
-    else
-        deathmatch_kills = get_stat_deathmatch_kills
+    return retrieved_stat_int
+end
+
+---Set a stat and global at once.
+---@param global_integer integer --The global for the stat.
+---@param stat_name string --The stat name.
+---@param value number --The value to set.
+local function write_global_stat_int(global_integer, stat_name, value)
+    local stat_hash = util.joaat(stat_name)
+    memory.write_int(global_integer, value)
+    STATS.STAT_SET_INT(stat_hash, value, true)
+end
+
+---Set a stat and global at once.
+---@param global_integer integer --The global for the stat.
+---@param stat_name string --The stat name.
+---@param value number --The value to set.
+local function write_global_stat_float(global_integer, stat_name, value)
+    local stat_hash = util.joaat(stat_name)
+    memory.write_int(global_integer, value)
+    STATS.STAT_SET_FLOAT(stat_hash, value, true)
+end
+
+local function update_current_display()
+    current_kills = read_global_stat_int(kills_global, "MPPLY_KILLS_PLAYERS")
+    current_deaths = read_global_stat_int(deaths_global, "MPPLY_DEATHS_PLAYER")
+
+    current_ratio = round(current_kills / current_deaths, 2)
+
+    if current_kills == 0 or current_deaths == 0 then
+        current_ratio = 0
     end
 
-    if get_global_deathmatch_deaths == get_stat_deathmatch_deaths then
-        deathmatch_deaths = get_global_deathmatch_deaths
-    else
-        deathmatch_deaths = get_stat_deathmatch_deaths
-    end
-
-    cur_ratio = round(cur_kills / cur_deaths, 2)
-
-    if cur_kills == 0 and cur_deaths == 0 then
-        cur_ratio = 0
-    end
-end)
+    menu.set_menu_name(current_kills_display, "Current Kills: " .. current_kills)
+    menu.set_menu_name(current_death_display, "Current Deaths: " .. current_deaths)
+    menu.set_menu_name(current_ratio_display, "Current Ratio: " .. current_ratio)
+end
 
 if util.is_session_started() then
 
+    update_current_display()
+
     my_root:divider("Current KD")
 
-    local cur_kills_display = my_root:action("Current Kills: " .. cur_kills, { "" }, "Shows current kills.", function() end)
+    current_kills_display = my_root:action("Current Kills: " .. current_kills, { "" }, "Shows current kills.", function() end)
 
-    local cur_death_display = my_root:action("Current Deaths: " .. cur_deaths, { "" }, "Shows current deaths.", function() end)
+    current_death_display = my_root:action("Current Deaths: " .. current_deaths, { "" }, "Shows current deaths.", function() end)
 
-    local cur_ratio_display = my_root:action("Current Ratio: " .. cur_ratio, { "" }, "Shows current ratio.", function() end)
+    current_ratio_display = my_root:action("Current Ratio: " .. current_ratio, { "" }, "Shows current ratio.", function() end)
 
     my_root:divider("New KD")
 
-    local kills_slider_value = cur_kills
-    local deaths_slider_value = cur_deaths
+    kills_slider_value = current_kills
+    deaths_slider_value = current_deaths
 
-    local new_kills = my_root:slider("New Kills Amount", {"killsamount"}, "Selects the number of kills.", -max_int, max_int, cur_kills, 1, function(value)
+    new_kills = my_root:slider("New Kills Amount", {"killsamount"}, "Selects the number of kills.", -max_int, max_int, current_kills, 1, function(value)
         kills_slider_value = value
     end)
 
-    local new_deaths = my_root:slider("New Deaths Amount", {"deathsamount"}, "Selects the number of deaths.", -max_int, max_int, cur_deaths, 1, function(value)
+    new_deaths = my_root:slider("New Deaths Amount", {"deathsamount"}, "Selects the number of deaths.", -max_int, max_int, current_deaths, 1, function(value)
         deaths_slider_value = value
     end)
 
     util.create_tick_handler(function()
-        new_ratio = menu.get_value(new_kills) / menu.get_value(new_deaths)
+
+        local read_new_kills, read_new_deaths = menu.get_value(new_kills), menu.get_value(new_deaths)
+
+        new_ratio = round(read_new_kills / read_new_deaths, 2)
+
+        if read_new_kills == 0 and read_new_deaths == 0 then
+            new_ratio = 0
+        end
+
+        menu.set_menu_name(new_ratio_display, "New Ratio: " .. new_ratio)
     end)
 
-    local new_ratio_display = my_root:action("New Ratio: " .. round(new_ratio, 2), { "" }, "Shows new ratio.", function()  end)
+    new_ratio_display = my_root:action("New Ratio: " .. round(new_ratio, 2), { "" }, "Shows new ratio.", function()  end)
 
     my_root:action("Set KD", { "setkd" }, "Sets your KD.", function()
 
-        memory.write_int(global_kills, kills_slider_value)
-        memory.write_int(global_deaths, deaths_slider_value)
-        memory.write_float(global_ratio, new_ratio)
-        memory.write_int(global_deathmatch_kills, kills_slider_value)
-        memory.write_int(global_deathmatch_deaths, deaths_slider_value)
+        write_global_stat_int(kills_global, "MPPLY_KILLS_PLAYERS", kills_slider_value)
+        write_global_stat_int(deaths_global, "MPPLY_DEATHS_PLAYER", deaths_slider_value)
+        write_global_stat_float(ratio_global, "MPPLY_KILL_DEATH_RATIO", new_ratio)
+        write_global_stat_int(deathmatch_kills_global, "MPPLY_DM_TOTAL_KILLS", kills_slider_value)
+        write_global_stat_int(deathmatch_deaths_global, "MPPLY_DM_TOTAL_DEATHS", deaths_slider_value)
 
-        STATS.STAT_SET_INT(kills_stat_hash, kills_slider_value, true)
-        STATS.STAT_SET_INT(deaths_stat_hash, deaths_slider_value, true)
-        STATS.STAT_SET_FLOAT(ratio_stat_hash, new_ratio, true)
-        STATS.STAT_SET_INT(deathmatch_kills_stat_hash, kills_slider_value, true)
-        STATS.STAT_SET_INT(deathmatch_deaths_stat_hash, deaths_slider_value, true)
+        update_current_display()
 
         util.toast("Set your KD ratio to " .. new_ratio .. " c:")
     end)
-
-    util.create_tick_handler(function()
-        menu.set_menu_name(cur_kills_display, "Current Kills: " .. cur_kills)
-        menu.set_menu_name(cur_death_display, "Current Deaths: " .. cur_deaths)
-        menu.set_menu_name(cur_ratio_display, "Current Ratio: " .. round(cur_ratio, 2))
-        menu.set_menu_name(new_ratio_display, "New Ratio: " .. new_ratio)
-    end)
 else
-    util.yield(169)
     util.toast("You have to be online!")
     util.stop_script()
 end
