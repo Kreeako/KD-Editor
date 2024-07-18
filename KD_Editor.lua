@@ -5,7 +5,7 @@
 --  ║                                                                                                                                             ║
 --  ╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 
-if menu.get_version().game ~= "1.69-3258" then
+if menu.get_version().game ~= "1.69-3274" then
     util.toast("The version of this script is outdated, check github for an update.")
     util.stop_script()
 end
