@@ -5,18 +5,18 @@
 --  ║                                                                                                                                             ║
 --  ╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 
-if menu.get_version().game ~= "1.69-3274" then
+if menu.get_version().game ~= "1.70-3442" then
     util.toast("The version of this script is outdated, check github for an update.")
     util.stop_script()
 end
 
-local _MPPLY_GLOBAL_0 <const> = 1845281
-local _MPPLY_GLOBAL_1 <const> = 877
-local _MPPLY_GLOBAL_2 <const> = 205
+local _MPPLY_GLOBAL_0 <const> = 1845221
+local _MPPLY_GLOBAL_1 <const> = 889
+local _MPPLY_GLOBAL_2 <const> = 206
 
-local _MPPLY_DM_GLOBAL_0 <const> = 2657971
-local _MPPLY_DM_GLOBAL_1 <const> = 463
-local _MPPLY_DM_GLOBAL_2 <const> = 126
+local _MPPLY_DM_GLOBAL_0 <const> = 2657991
+local _MPPLY_DM_GLOBAL_1 <const> = 467
+local _MPPLY_DM_GLOBAL_2 <const> = 129
 
 local MPPLY_KILLS_PLAYERS_GLOBAL    <const> = memory.script_global(_MPPLY_GLOBAL_0 + 1 +    (players.user() * _MPPLY_GLOBAL_1)    + _MPPLY_GLOBAL_2 + 28)       -- MPPLY_KILLS_PLAYERS
 local MPPLY_DEATHS_PLAYER_GLOBAL    <const> = memory.script_global(_MPPLY_GLOBAL_0 + 1 +    (players.user() * _MPPLY_GLOBAL_1)    + _MPPLY_GLOBAL_2 + 29)       -- MPPLY_DEATHS_PLAYER
@@ -30,11 +30,12 @@ local base_root <const> = menu.my_root()
 local int64_max_positive <const> = 2147483647
 local int64_max_negative <const> = -2147483648
 
-local MPPLY_KILLS_PLAYERS_HASH    <const> = util.joaat("MPPLY_KILLS_PLAYERS")
-local MPPLY_DEATHS_PLAYER_HASH    <const> = util.joaat("MPPLY_DEATHS_PLAYER")
-local MPPLY_KILL_DEATH_RATIO_HASH <const> = util.joaat("MPPLY_KILL_DEATH_RATIO")
-local MPPLY_DM_TOTAL_KILLS_HASH   <const> = util.joaat("MPPLY_DM_TOTAL_KILLS")
-local MPPLY_DM_TOTAL_DEATHS_HASH  <const> = util.joaat("MPPLY_DM_TOTAL_DEATHS")
+local MPPLY_KILLS_PLAYERS_HASH         <const> = util.joaat("MPPLY_KILLS_PLAYERS")
+local MPPLY_DEATHS_PLAYER_HASH         <const> = util.joaat("MPPLY_DEATHS_PLAYER")
+local MPPLY_DEATHS_PLAYER_SUICIDE_HASH <const> = util.joaat("MPPLY_DEATHS_PLAYER_SUICIDE")
+local MPPLY_KILL_DEATH_RATIO_HASH      <const> = util.joaat("MPPLY_KILL_DEATH_RATIO")
+local MPPLY_DM_TOTAL_KILLS_HASH        <const> = util.joaat("MPPLY_DM_TOTAL_KILLS")
+local MPPLY_DM_TOTAL_DEATHS_HASH       <const> = util.joaat("MPPLY_DM_TOTAL_DEATHS")
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Online Functions / Variables
@@ -163,6 +164,7 @@ end
 
 local read_mpply_deaths_pointer = memory.alloc(4)
 local function read_mpply_deaths()
+    STATS.STAT_SET_INT(MPPLY_DEATHS_PLAYER_SUICIDE_HASH, 0, true)
     local int_stat_retrieved = STATS.STAT_GET_INT(MPPLY_DEATHS_PLAYER_HASH, read_mpply_deaths_pointer, -1)
 
     local retrieved_global_int = memory.read_int(MPPLY_DEATHS_PLAYER_GLOBAL)
@@ -196,6 +198,8 @@ local function read_mpply_ratio()
 end
 
 local function write_kd(kills, deaths, ratio)
+    STATS.STAT_SET_INT(MPPLY_DEATHS_PLAYER_SUICIDE_HASH, 0, true)
+
     memory.write_int(MPPLY_KILLS_PLAYERS_GLOBAL, kills)
     STATS.STAT_SET_INT(MPPLY_KILLS_PLAYERS_HASH, kills, true)
 
@@ -235,13 +239,11 @@ if online.in_session() then
     local kills_slider_value = current_kills
     local deaths_slider_value = current_deaths
 
-    new_kills = base_root:slider("New Kills Amount", { "killsamount" }, "Selects the number of kills.",
-        int64_max_negative, int64_max_positive, current_kills, 1, function(value)
+    new_kills = base_root:slider("New Kills Amount", { "killsamount" }, "Selects the number of kills.", int64_max_negative, int64_max_positive, current_kills, 1, function(value)
         kills_slider_value = value
     end)
 
-    new_deaths = base_root:slider("New Deaths Amount", { "deathsamount" }, "Selects the number of deaths.",
-        int64_max_negative, int64_max_positive, current_deaths, 1, function(value)
+    new_deaths = base_root:slider("New Deaths Amount", { "deathsamount" }, "Selects the number of deaths.", int64_max_negative, int64_max_positive, current_deaths, 1, function(value)
         deaths_slider_value = value
     end)
 
